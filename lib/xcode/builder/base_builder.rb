@@ -15,7 +15,7 @@ module Xcode
         @sdk = @target.project.sdk
         @build_path = "#{File.dirname(@target.project.path)}/build/"
         @objroot = @build_path
-        @symroot = @build_path
+        @symroot = configuration_build_path
       end
       
       def common_environment
@@ -53,7 +53,7 @@ module Xcode
       def test(options = {:sdk => 'iphonesimulator'}) #, :parser => :OCUnit })
         cmd = xcodebuild
         cmd << "-sdk #{options[:sdk]}" unless options[:sdk].nil?
-        cmd.env["TEST_AFTER_BUILD"]="YES"
+        cmd.env["SL_RUN_UNIT_TESTS"]="YES"
 
         report = Xcode::Test::Report.new
         if block_given?
