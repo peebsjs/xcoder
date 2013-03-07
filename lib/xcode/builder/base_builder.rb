@@ -13,9 +13,9 @@ module Xcode
         @config = config
 
         @sdk = @target.project.sdk
-        @build_path = "#{File.dirname(@target.project.path)}/build/"
+        @build_path = "#{File.dirname(@target.project.path)}/build"
         @objroot = @build_path
-        @symroot = configuration_build_path
+        @symroot = @build_path
       end
 
       def common_environment
@@ -35,7 +35,7 @@ module Xcode
       end
 
 
-      def build(options = {:sdk => @sdk}, show_output, &block)
+      def build(options = {:sdk => @sdk}, show_output = true, &block)
         cmd = xcodebuild
         cmd << "-sdk #{options[:sdk]}" unless options[:sdk].nil?
 
