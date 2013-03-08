@@ -37,5 +37,9 @@ module Xcode
     def save
       File.open(@plist_location, 'w') {|f| f << @plist.to_plist}
     end
+
+    def plist_location
+      @plist_location
+    end
   end
 end
