@@ -294,7 +294,7 @@ module Xcode
 
       target.name = name
 
-      build_configuration_list = @registry.add_object(ConfigurationList.configration_list)
+      build_configuration_list = @registry.add_object(ConfigurationList.configuration_list)
       target.build_configuration_list = build_configuration_list.identifier
 
       target.project = self
@@ -341,8 +341,8 @@ module Xcode
       end
       schemes.each do |s|
         puts " + scheme #{s.name}"
-        puts "    + Launch action => target:#{s.launch.target.name}, config:#{s.launch.name}" unless s.launch.nil?
-        puts "    + Test action   => target:#{s.test.target.name}, config:#{s.test.name}" unless s.test.nil?
+        puts "    + targets: #{s.build_targets.map{|t| t.name}}"
+        puts "    + config:  #{s.build_config}"
       end
     end
 
@@ -365,6 +365,10 @@ module Xcode
       end
 
       registry
+    end
+
+    def to_s
+      "#{name} (Project)"
     end
 
   end

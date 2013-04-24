@@ -1,5 +1,6 @@
 require 'find'
 require 'fileutils'
+require 'xcode/terminal_output'
 require "xcode/version"
 require "xcode/project"
 require "xcode/info_plist"
@@ -7,7 +8,6 @@ require "xcode/shell"
 require 'plist'
 require 'xcode/keychain'
 require 'xcode/workspace'
-require 'xcode/buildfile'
 require 'multi_json'
 
 module Xcode

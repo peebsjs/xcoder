@@ -1,18 +1,12 @@
 module Xcode
   
   module Keychains
-    
+
     #
     # Yield when the keychain is in the search path and remove it when the block returns
     #
     def self.with_keychain_in_search_path(kc, &block)
-      keychains = self.search_path
-      begin 
-        self.search_path = [kc] + keychains
-        yield
-      ensure
-        self.search_path = keychains
-      end
+      kc.in_search_path &block
     end
     
     
@@ -45,6 +39,8 @@ module Xcode
   end
   
   class Keychain
+    include Xcode::TerminalOutput
+
     attr_accessor :name, :path
     
     TEMP_PASSWORD = "build_keychain_password"
@@ -60,6 +56,27 @@ module Xcode
       @name = File.basename path
       
       yield(self) if block_given?
+    end
+
+    def to_s
+      "Keychain(#{@name})"
+    end
+
+    #
+    # Installs this keychain in the head of teh search path and restores the original on
+    # completion of the block
+    #
+    # @param the block to be invoked with the modified search path
+    #
+    def in_search_path(&block)
+      keychains = Keychains.search_path
+      begin 
+        Keychains.search_path = [self] + keychains
+        yield
+      ensure
+        Keychains.search_path = keychains
+        # print_task 'keychain', "Restored search path"
+      end
     end
     
     #
@@ -88,7 +105,8 @@ module Xcode
       cmd << "find-certificate"
       cmd << "-a"
       cmd << "\"#{@path}\""
-      data = cmd.execute(false).join("")
+      cmd.show_output = false
+      data = cmd.execute.join("")
       data.scan /\s+"labl"<blob>="([^"]+)"/ do |m|
         names << m[0]
       end

@@ -17,7 +17,11 @@ module Xcode
         location = file["location"]
         if matcher = location.match(/^group:(.+)$/)
           project_path = "#{workspace_root}/#{matcher[1]}"
-          @projects << Xcode::Project.new(project_path)
+          begin
+            @projects << Xcode::Project.new(project_path)
+          rescue => e
+            puts "Skipping project file #{project_path} referened by #{self} as it failed to parse"
+          end
         end
       end
     end    
@@ -41,8 +45,8 @@ module Xcode
     # @return [Scheme] the specific scheme that matches the name specified
     #
     def scheme(name)
-      scheme = schemes.select {|t| t.name == name.to_s}.first
-      raise "No such scheme #{name}, available schemes are #{schemes.map {|t| t.name}.join(', ')}" if scheme.nil?
+      scheme = schemes.select {|t| t.name == name.to_s and t.parent == self}.first
+      raise "No such scheme #{name} in #{self}, available schemes are #{schemes.map {|t| t.to_s}.join(', ')}" if scheme.nil?
       yield scheme if block_given?
       scheme
     end
@@ -58,9 +62,13 @@ module Xcode
     #
     def project(name)
       project = @projects.select {|c| c.name == name.to_s}.first
-      raise "No such project #{name}, available projects are #{@projects.map {|c| c.name}.join(', ')}" if project.nil?
+      raise "No such project #{name} in #{self}, available projects are #{@projects.map {|c| c.name}.join(', ')}" if project.nil?
       yield project if block_given?
       project
+    end
+
+    def to_s
+      "#{name} (Workspace)"
     end
     
     def describe

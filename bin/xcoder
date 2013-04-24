@@ -1,0 +1,68 @@
+#!/usr/bin/env ruby
+require 'xcoder'
+require 'optparse'
+
+require 'xcode/buildspec'
+
+options = {}
+OptionParser.new do |opts|
+  opts.banner = "Usage: xcoder [options]"
+
+
+  opts.separator ""
+  opts.separator "Specific options:"
+
+  opts.on("-d", "--describe", "Dump the structure of the projects/workspaces in the working directory") do |v|
+  	Xcode.workspaces.each do |w|
+	    puts w.describe
+	  end
+	  
+	  Xcode.projects.each do |p|
+	    puts p.describe
+	  end
+    # options[:verbose] = v
+  end
+
+  opts.on("--install-profile [PROFILE]", "Install the given profile into ~/Library") do |profile|
+  	Xcode::ProvisioningProfile.new(profile).install
+  end
+
+	opts.separator ""
+  opts.separator "Buildspec options:"
+
+  opts.on("-r", "--run [task]", "Run the Buildspec with the given task, defaults to 'deploy'") do |task|
+  	Xcode::Buildspec.parse
+  	task = 'deploy' if task.nil?
+  	Rake::Task[task].invoke
+  end
+
+  opts.on("-T", "--tasks", "List the available Buildspec tasks") do
+  	Xcode::Buildspec.parse
+  	puts Rake.application.tasks
+	end
+
+	opts.separator ""
+  opts.separator "Common options:"
+
+  opts.on_tail("-h", "--help", "Show this message") do
+    puts opts
+    exit
+  end
+
+  opts.on_tail("-l", "--loglevel LEVEL", "Show only output at LEVEL or below " + Xcode::TerminalOutput::LEVELS.join(", ")) do |level|
+  	Xcode::TerminalOutput.log_level = level.to_sym
+  end
+
+  # opts.on_tail("-vv", "Show VERY verbose (debug level) output") do
+  # 	Xcode::TerminalOutput.log_level = :debug
+  # end
+
+  opts.on_tail("-q", "Hide all output except errors (equivilent to -l :error") do
+  	Xcode::TerminalOutput.log_level = :error
+  end
+
+  opts.on_tail("--version", "Show version") do
+    puts "Xcoder #{Xcode::VERSION}"
+    exit
+  end
+end.parse!

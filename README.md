@@ -8,7 +8,7 @@ Full documentation can be found here: http://rayh.github.com/xcoder/
 
 ## Requirements
 
-Xcoder assumes you are using XCode 4.3 on Lion and ruby 1.9.  You may have some degree of success with lesser versions, but they are not intentionally supported.
+Xcoder assumes you are using XCode 4.6 on Mountain Lion and ruby 1.9.  You may have some degree of success with lesser versions, but they are not intentionally supported.
 
 ## Example Usage
 
@@ -84,6 +84,23 @@ This will produce something like: MyProject-Debug-1.0.ipa and MyProject-Debug-1.
 	  info.save
 	end
 
+### Managing build numbers more efficiently
+
+Based on our experience we suggest [Versionomy](https://github.com/dazuma/versionomy) to manage version numbers. 
+Although the marketing version is usually set by hand on release, 
+there are situations where it could be nice to have an incremental build number in the marketing version number as well.
+The following is an example that takes a marketing version number in the x.y.z format and increments the last part of it.
+
+	config.info_plist do |info|
+  	  info.version = info.version.to_i + 1
+  	  marketing_version = Versionomy.parse(info.marketing_version)
+  	  info.marketing_version = marketing_version.bump(:tiny).to_s
+  	  info.save
+	end
+
+You can read more about Versionomy at their [site](https://github.com/dazuma/versionomy)
+
+
 ### Working with workspaces
 
 Loading workspaces can be done in a similar way to projects:
@@ -118,7 +135,8 @@ Note: Shared schemes and user (current logged in user) specific schemes are both
 
 The library provides a mechanism to install/uninstall a provisioning profile.  This normally happens as part of a build (if a profile is provided to the builder, see above), but you can do this manually:
 
-	Xcode::ProvisioningProfile.new("Myprofile.mobileprovision").install	# installs profile into ~/Library
+	# installs profile into ~/Library
+	Xcode::ProvisioningProfile.new("Myprofile.mobileprovision").install	
 
 Or enumerate installed profiles:
 
@@ -126,18 +144,59 @@ Or enumerate installed profiles:
 		p.uninstall		# Removes the profile from ~/Library/
 	end
 
-### [Testflight](http://testflightapp.com)
+### Deployment
+
+#### [Testflight](http://testflightapp.com)
 
 The common output of this build/package process is to upload to Testflight.  This is pretty simple with Xcoder:
 
-	builder.testflight(API_TOKEN, TEAM_TOKEN) do |tf|
-	  tf.notes = "some release notes"
- 	  tf.notify = true	# Whether to send a notification to users, default is true
-      tf.lists << "AList"  # The lists to distribute the build to
-	end
+	# Optionally do this, saves doing it again and again
+	Xcode::Deploy::Testflight.defaults :api_token => 'some api token', :team_token => 'team token'
 
-You can also optionally set a .proxy= property or just set the HTTP_PROXY environment variable.
+	builder.deploy :testflight,
+		:api_token 	=> API_TOKEN, 
+		:team_token => TEAM_TOKEN,
+		:notes 		=> "some release notes",
+ 	  	:notify 	=> true,		# Whether to send a notification to users, default is true
+      	:lists 		=> ["AList"]  	# The lists to distribute the build to
 
+You can also optionally set the HTTP_PROXY environment variable.
+
+#### Deploying to Amazon S3
+
+You can upload the output ipa to an arbitrary buckey on S3
+
+	builder.deploy :s3, 
+		:bucket => "mybucket", 
+		:access_key_id => "access id", 
+		:secret_access_key => "access key", 
+		:dir => "options/path/within/bucket"
+
+#### Deploying to a web server (SSH)
+
+The output of the build/package process can be deployed to a remote web server.
+You can use SSH with the following syntax:
+
+	builder.deploy :ssh, 
+		:host => "mywebserver.com", 
+		:username => "myusername", 
+		:password => "mypassword", 
+		:dir => "/var/www/mywebserverpath",
+		:base_url => "http://mywebserver.com/"
+
+#### Deploying to a web server (FTP)
+
+The output of the build/package process can be deployed to a remote web server.
+You can upload the files through FTP with the following syntax:
+
+	builder.deploy :ftp, 
+		:host => "ftp.mywebserver.com", 
+		:username => "myusername", 
+		:password => "mypassword", 
+		:dir => "/mywebserverpath",
+		:base_url => "http://mywebserver.com/"
+
+	
 ### OCUnit to JUnit reports
 
 You can invoke your test target/bundle from the builder
@@ -307,6 +366,48 @@ Within the `specs/integration` folder there are more examples.
 There are some basic RSpec tests in the project which I suspect /wont/ work on machines without my identity installed.
 
 Currently these tests only assert the basic project file parsing and build code and do not perform file modification tests (e.g. for info plists) or provisioning profile/keychain importing
+
+## Automation and CI (BETA)
+
+NOTE: This is only available in HEAD, you will need to install this gem from source to get this Buildspec support and the xcoder tool
+
+This stuff is a work-in-progress and is subject to change.
+
+Xcoder provides a simple mechanism to help with automating builds and CI.  First, define a Buildspec file in the root of your project with contents like this:
+
+	# Assumes identity is first in keychain
+	group :adhoc do
+
+	  # Which project/target/config, or workspace/scheme to use
+	  use :MyProject, :target => :MyTarget, :config => :Release
+	    
+	  # The mobile provision that should be used
+	  profile 'Provisioning/MyProject_AdHoc.mobileprovision'
+
+	  # Keychain is option, allows isolation of identities per-project without 
+	  # poluting global keychain
+	  keychain 'Provisioning/build.keychain', 'build'
+	  
+	  deploy :testflight, 
+	    :api_token => 'api token', 
+	    :team_token => 'team token',
+	    :notify => true, 
+	    :lists => ['Internal'], 
+	    :notes => `git log -n 1`
+	end
+
+You can then invoke the project using the xcoder command line:
+
+	# Invoke the default task (deploy)
+	xcoder -r
+
+	# Invoke a specific task
+	xcoder -r adhoc:package
+
+	# Get a list of tasks
+	xcoder -T
+
+This is a bit of a work-in-progress and an attempt to allow projects to provide a minimal declaration of how thier artifacts should be built and where they should go.  Integration with CI (Jenkins, for example) or just running locally from the command line should be simple.
 
 ## Feedback
 
