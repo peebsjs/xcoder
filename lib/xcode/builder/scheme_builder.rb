@@ -18,7 +18,7 @@ module Xcode
       def initialize(scheme)
         @scheme     = scheme
         @target     = @scheme.build_targets.last
-        super @target, @target.config(@scheme.archive_config)
+        super @target, @target.config(@scheme.build_config)
       end
 
       def prepare_xcodebuild sdk=nil
